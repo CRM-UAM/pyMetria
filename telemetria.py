@@ -14,22 +14,59 @@ import serial
 import numpy as np
 import matplotlib
 matplotlib.use('TKAgg')
+import time
+import os
+
 from matplotlib import pyplot as plt
 from matplotlib import animation
 
 
-ser = serial.Serial('/dev/cu.bqZUM_BT328-SPPDev', 19200, timeout=0)
+import serial
+import threading
+connected = False
+serial_port = serial.Serial('/dev/cu.bqZUM_BT328-SPPDev', 19200)
 
-sum = 250
+
+i=0
+times  = [0]*100
+data1 = [0]*100
+data2 = [0]*100
+
+
+
+def handle_data(s):
+    global data1
+    global times
+    global data2
+    arg = s.split(' ')
+    times.append(float(arg[0]))
+    data1.append(float(arg[1]))
+    data2.append(float(arg[2]))
+
+
+def read_from_port(ser):
+    global connected
+    while not connected:
+        #serin = ser.read()
+        connected = True
+
+        while True:
+           reading = ser.readline().decode('utf8')
+           handle_data(reading)
+
+thread = threading.Thread(target=read_from_port, args=(serial_port,))
+thread.start()
+
+
 # First set up the figure, the axis, and the plot element we want to animate
 fig = plt.figure()
 ax1 =fig.add_subplot(211)
 ax2 =fig.add_subplot(212)
 #ax = plt.axes(xlim=(0, 2), ylim=(-2, 2))
-ax1.set_xlim([-5, 5])
-ax1.set_ylim([-5, 5])
-ax2.set_xlim([-5, 5])
-ax2.set_ylim([-5, 5])
+ax1.set_xlim([-5, 0.1])
+ax1.set_ylim([-5, 500])
+ax2.set_xlim([-5, 0.1])
+ax2.set_ylim([-5, 500])
 line, = ax1.plot([], [], lw=2)
 line2, = ax2.plot([], [], lw=2)
 
@@ -40,27 +77,19 @@ def init():
     return line,
 
 
-def getXYdata(t):
-    global sum
-    #while sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
-    #    line = sys.stdin.readline()
-    #    if line:
-    #        sum = float(line)
-    #
-    #print(time.time())
-    line = ser.readline()
-    if line:
-        sum = float(line)
-        print(line)
-    x = np.linspace(-5, 0, 1000)
-    y = (sum/250) * np.cos( 2 * np.pi * (x - 0.01 * t))
-    return x, y
+def getXYdata1(t):
+    global data1
+    x = np.linspace(-5, 0, 100)
+    return x, data1[-100:]
+
 # animation function.  This is called sequentially
 def animate(i):
     #print(i)
-    x, y = getXYdata(i)
-    line.set_data(x, y)
-    line2.set_data(x, -y)
+    #x, y = getXYdata1(i)
+    ax1.set_xlim([times[-100], times[-1]])
+    line.set_data(times[-100:], data1[-100:])
+    ax2.set_xlim([times[-100], times[-1]])
+    line2.set_data(times[-100:], data2[-100:])
     #ax2.set_xlim([-2.2+float(i)/100, 2.2+float(i)/100])
     return line,line2,
 
@@ -77,3 +106,7 @@ anim = animation.FuncAnimation(fig, animate, init_func=init,
 
 plt.show()
 
+
+print("FIN")
+connected = False
+os._exit(0)
