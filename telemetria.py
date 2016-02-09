@@ -1,112 +1,136 @@
-"""
-Matplotlib Animation Example
-
-author: Jake Vanderplas
-email: vanderplas@astro.washington.edu
-website: http://jakevdp.github.com
-license: BSD
-Please feel free to use and modify this, but keep the above information. Thanks!
-"""
-import time
-import sys
-import select
+# -*- coding: utf-8 -*-
 import serial
-import numpy as np
+import time
 import matplotlib
 matplotlib.use('TKAgg')
-import time
 import os
-
 from matplotlib import pyplot as plt
 from matplotlib import animation
-
-
-import serial
 import threading
-connected = False
-serial_port = serial.Serial('/dev/cu.bqZUM_BT328-SPPDev', 19200)
+
+ANCHO_X_SEG = 60
+
+class Telemetria:
+    '''
+    Clase para guardar los datos de la telemetria y leerlos del serial/bluetooth
+    '''
+    # pylint: disable=too-many-instance-attributes
+    # Eight is reasonable in this case.
+    def __init__(self, serial_port):
+        self.connected = True
+        self.sp = serial.Serial(serial_port, 19200) #'/dev/cu.bqZUM_BT328-SPPDev'
+        self.timeList = []
+        self.data = []
+        self.fig = plt.figure()
+        self.fig.canvas.set_window_title('pyTelemetría')
+        self.ax = []
+        self.lines = []
+
+    def getLines(self):
+        return self.lines
+
+    def getAx(self, i):
+        return self.ax[i]
+
+    def getTimeList(self):
+        return self.timeList
+
+    def getData(self):
+        return self.data
+
+    def getFig(self):
+        return self.fig
+
+    def inicializar(self):
+        lin = self.sp.readline()
+        while not lin.startswith('pT '):
+            lin = self.sp.readline()
+        ldata = lin[3:].split('/')
+        self.timeList.append(ldata[0])
+        nbloque = 0
+        for bloque in ldata[1].split('|'):
+            self.data.append([])
+            for word in bloque.split(' '):
+                self.data[nbloque].append([float(word)])
+            nbloque += 1
+        for i in range(1, len(self.data)+1):
+            self.ax.append(self.fig.add_subplot(len(self.data)*100+10+i))
+            for _ in range(len(self.data[i-1])):
+
+                self.lines.extend(self.ax[-1].plot([], [], lw=2))
+
+    def isRun(self):
+        return self.connected
+
+    def updateData(self):
+        lin = self.sp.readline()
+        while lin.startswith('pT ') == False:
+            lin = self.sp.readline()
+        ldata = lin[3:].split('/')
+        self.timeList.append(ldata[0])
+        nbloque = 0
+        for bloque in ldata[1].split('|'):
+            ind = 0
+            for word in bloque.split(' '):
+                self.data[nbloque][ind].append(float(word))
+                ind += 1
+            nbloque += 1
+
+    def debug(self):
+        print "DEBUG -->"
+        print self.data
+        print self.lines
+
+    def stop(self):
+        self.connected = False
 
 
-i=0
-times  = [0]*100
-data1 = [0]*100
-data2 = [0]*100
+TELEM = Telemetria('/dev/cu.bqZUM_BT328-SPPDev')
+TELEM.inicializar()
 
 
+def threadFun():
+    global TELEM
+    while(TELEM.isRun()):
+        TELEM.updateData()
 
-def handle_data(s):
-    global data1
-    global times
-    global data2
-    arg = s.split(' ')
-    times.append(float(arg[0]))
-    data1.append(float(arg[1]))
-    data2.append(float(arg[2]))
-
-
-def read_from_port(ser):
-    global connected
-    while not connected:
-        #serin = ser.read()
-        connected = True
-
-        while True:
-           reading = ser.readline().decode('utf8')
-           handle_data(reading)
-
-thread = threading.Thread(target=read_from_port, args=(serial_port,))
-thread.start()
-
-
-# First set up the figure, the axis, and the plot element we want to animate
-fig = plt.figure()
-ax1 =fig.add_subplot(211)
-ax2 =fig.add_subplot(212)
-#ax = plt.axes(xlim=(0, 2), ylim=(-2, 2))
-ax1.set_xlim([-5, 0.1])
-ax1.set_ylim([-5, 500])
-ax2.set_xlim([-5, 0.1])
-ax2.set_ylim([-5, 500])
-line, = ax1.plot([], [], lw=2)
-line2, = ax2.plot([], [], lw=2)
+THREAD = threading.Thread(target=threadFun)
+THREAD.start()
 
 # initialization function: plot the background of each frame
 def init():
-    line.set_data([], [])
-    line2.set_data([], [])
-    return line,
+    global TELEM
+    for line in TELEM.getLines():
+        line.set_data([], [])
+    return TELEM.getLines()
+
+def updatePlot(i):
+    global TELEM
+    ind = 0
+    for i in range(len(TELEM.getData())):
+        numpoints = min([len(TELEM.getTimeList()), 100])
+        ltotal = [item for sublist in TELEM.getData()[i] for item in sublist[-numpoints:]]
+        mmin, mmax = min(ltotal)*1.1, max(ltotal)*0.9
+        ax = TELEM.getAx(i)
+        ax.set_ylim([mmin, mmax])
+        lasttime = 0
+        if len(TELEM.getTimeList()) > 0:
+            lasttime = TELEM.getTimeList()[-1]
+        ax.set_xlim([int(lasttime)-ANCHO_X_SEG, int(lasttime)])
+        for j in range(len(TELEM.getData()[i])):
+            numpoints = len( [x for x in TELEM.getData()[i][j] if x > (int(lasttime)-100)])
+            lin = TELEM.getLines()
+            lin[ind].set_data(TELEM.getTimeList()[-numpoints:], TELEM.getData()[i][j][-numpoints:])
+            ind += 1
+    return TELEM.getLines()
 
 
-def getXYdata1(t):
-    global data1
-    x = np.linspace(-5, 0, 100)
-    return x, data1[-100:]
-
-# animation function.  This is called sequentially
-def animate(i):
-    #print(i)
-    #x, y = getXYdata1(i)
-    ax1.set_xlim([times[-100], times[-1]])
-    line.set_data(times[-100:], data1[-100:])
-    ax2.set_xlim([times[-100], times[-1]])
-    line2.set_data(times[-100:], data2[-100:])
-    #ax2.set_xlim([-2.2+float(i)/100, 2.2+float(i)/100])
-    return line,line2,
 
 # call the animator.  blit=True means only re-draw the parts that have changed.
-anim = animation.FuncAnimation(fig, animate, init_func=init,
-                               frames=None, interval=50, blit=False)
-
-# save the animation as an mp4.  This requires ffmpeg or mencoder to be
-# installed.  The extra_args ensure that the x264 codec is used, so that
-# the video can be embedded in html5.  You may need to adjust this for
-# your system: for more information, see
-# http://matplotlib.sourceforge.net/api/animation_api.html
-#anim.save('basic_animation.mp4', fps=30, extra_args=['-vcodec', 'libx264'])
-
+ANIM = animation.FuncAnimation(TELEM.getFig(), updatePlot, init_func=init, frames=None, interval=50, blit=False)
 plt.show()
 
 
-print("FIN")
-connected = False
+print "Finalizando aplicación"
+TELEM.stop()
 os._exit(0)
