@@ -1,4 +1,21 @@
 # -*- coding: utf-8 -*-
+'''
+pyMetria v1.0
+Aplicacion para recibir telemetría por PuertoSerie/Bluetooth y graficarla en tiempo real
+Protocolo de mensajes (en texto):
+    "pT timestamp/señal11 señal12 ... señal1N|señal21 señal22 ... señal2M| ... | ... |señalK1 señalK2 ... señalKL"
+        -timestamp: tiempo de mensaje (comun a todas las señale). Se pinta en el ejeX
+        -N,M,K,J numeros diferenes
+        -La señales en un mismo bloque (bloques separados por el simbolo '|') se pintan como diferentes lineas dentro de la misma grafica
+La aplicacion que envia los datos de telemetria elige que datos quiere graficar (todo es variable) aunque si que se necesita en esta version que e mantenga constante el numero de señales a lo largo de la ejecucion
+TODO (para versiones futuras):
+    -Guardar los valores registrados a fichero
+    -Permitir variar el numero de bloques/lineas en tiempo de ejecución
+    -Establecer una comunicación bidireccional para hacer peticiones de información de titulos y etiquetas de las diferentes señales
+'''
+
+
+
 import serial
 import time
 import matplotlib
@@ -14,8 +31,6 @@ class Telemetria:
     '''
     Clase para guardar los datos de la telemetria y leerlos del serial/bluetooth
     '''
-    # pylint: disable=too-many-instance-attributes
-    # Eight is reasonable in this case.
     def __init__(self, serial_port):
         self.connected = True
         self.sp = serial.Serial(serial_port, 19200) #'/dev/cu.bqZUM_BT328-SPPDev'
@@ -42,6 +57,10 @@ class Telemetria:
         return self.fig
 
     def inicializar(self):
+        '''
+        Metodo para inicializar la lectura de datos de telemetria por BT. Lee un mensaje y lo decodifica determinando en funcion de este mensaje el numero de gráficas y lineas por grafica necesarias.
+        Ejecutar siempre al comienzo del programa.
+        '''
         lin = self.sp.readline()
         while not lin.startswith('pT '):
             lin = self.sp.readline()
@@ -63,6 +82,7 @@ class Telemetria:
         return self.connected
 
     def updateData(self):
+        '''Lee el puerto serie hasta encontrar un mensaje del protocolo pyMetria y añade los datos del mensaje valido a la clase'''
         lin = self.sp.readline()
         while lin.startswith('pT ') == False:
             lin = self.sp.readline()
@@ -90,6 +110,7 @@ TELEM.inicializar()
 
 
 def threadFun():
+    ''' Funcion en un hilo que hace polling sobre el BT para leer datos cada que se escriben'''
     global TELEM
     while(TELEM.isRun()):
         TELEM.updateData()
@@ -97,14 +118,18 @@ def threadFun():
 THREAD = threading.Thread(target=threadFun)
 THREAD.start()
 
-# initialization function: plot the background of each frame
+
 def init():
+    '''initialization function: plot the background of each frame'''
     global TELEM
     for line in TELEM.getLines():
         line.set_data([], [])
     return TELEM.getLines()
 
 def updatePlot(i):
+    ''' actualización de las gráficas.
+    Se ajustan automaticamente los ejes X e Y.
+    '''
     global TELEM
     ind = 0
     for i in range(len(TELEM.getData())):
