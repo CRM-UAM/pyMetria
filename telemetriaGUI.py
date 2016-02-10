@@ -227,28 +227,30 @@ class Page(tk.Frame):
         global TELEM
         tk.Frame.__init__(self, parent)
 
-        lbl = tk.Label(self, text="Ajustar zoom (seg)")
+        lbl = tk.Label(self, text="Ajustar zoom (seg)").grid(row=1,column=0)
         self.entXlen = tk.Entry(self)
+        self.entXlen.grid(row=1,column=1)
         button1 = ttk.Button(self, text="Enter",
-                            command=lambda: self.changeXlen())
+                            command=lambda: self.changeXlen()).grid(row=1,column=2)
 
 
         canvas = FigureCanvasTkAgg(TELEM.getFig(), self)
         canvas.show()
-        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        canvas.get_tk_widget().grid(row=0,column=0,columnspan=3)
 
-        lbl.pack(side=tk.LEFT, padx=5, pady=5)
-        self.entXlen.pack(side=tk.LEFT)
-        button1.pack(side=tk.LEFT)
+        #lbl.pack(side=tk.LEFT, padx=5, pady=5)
+        #self.entXlen.pack(side=tk.LEFT)
+        #button1.pack(side=tk.LEFT)
 
-        lblF = tk.Label(self, text="Nombre del fichero Log")
+        lblF = tk.Label(self, text="Nombre del fichero Log").grid(row=2,column=0)
         self.entFile = tk.Entry(self)
+        self.entFile.grid(row=2,column=1)
         button2 = ttk.Button(self, text="Guardar datos",
-                            command=lambda: self.changeLog())
+                            command=lambda: self.changeLog()).grid(row=2,column=2)
 
-        lblF.pack(side=tk.LEFT, padx=5, pady=5)
-        self.entFile.pack(side=tk.LEFT)
-        button2.pack(side=tk.LEFT)
+        #lblF.pack(side=tk.BOTTOM, padx=5, pady=5)
+        #self.entFile.pack(side=tk.LEFT)
+        #button2.pack(side=tk.LEFT)
 
         #toolbar = NavigationToolbar2TkAgg(canvas, self)
         #toolbar.update()
