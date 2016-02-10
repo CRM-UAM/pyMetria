@@ -18,6 +18,7 @@ TODO (para versiones futuras):
 
 import tkinter as tk
 from tkinter import ttk
+import tkMessageBox
 import serial
 import time
 import matplotlib
@@ -91,6 +92,18 @@ class Telemetria:
 
     def isRun(self):
         return self.connected
+
+    def log2file(self, fileName):
+        with open(fileName, 'w') as f:
+            ind = 0
+            for t in self.timeList:
+                f.write("%lf" % (t))
+                for i in range(len(self.data)):
+                    for j in range(len(self.data[i])):
+                        f.write(" %lf" % (self.data[i][j][ind]));
+                f.write("\n")
+                ind +=1
+        return self.timeList[-1]
 
     def updateData(self):
         '''Lee el puerto serie hasta encontrar un mensaje del protocolo pyMetria y añade los datos del mensaje valido a la clase'''
@@ -216,9 +229,6 @@ class Page(tk.Frame):
 
         lbl = tk.Label(self, text="Ajustar zoom (seg)")
         self.entXlen = tk.Entry(self)
-        self.entXlen.focus_set()
-
-
         button1 = ttk.Button(self, text="Enter",
                             command=lambda: self.changeXlen())
 
@@ -231,6 +241,14 @@ class Page(tk.Frame):
         self.entXlen.pack(side=tk.LEFT)
         button1.pack(side=tk.LEFT)
 
+        lblF = tk.Label(self, text="Nombre del fichero Log")
+        self.entFile = tk.Entry(self)
+        button2 = ttk.Button(self, text="Guardar datos",
+                            command=lambda: self.changeLog())
+
+        lblF.pack(side=tk.LEFT, padx=5, pady=5)
+        self.entFile.pack(side=tk.LEFT)
+        button2.pack(side=tk.LEFT)
 
         #toolbar = NavigationToolbar2TkAgg(canvas, self)
         #toolbar.update()
@@ -239,6 +257,12 @@ class Page(tk.Frame):
     def changeXlen(self):
         global ANCHO_X_SEG
         ANCHO_X_SEG = int(self.entXlen.get())
+    def changeLog(self):
+        global TELEM
+        fname = self.entFile.get()
+        lasttime = TELEM.log2file(fname)
+        tkMessageBox.showinfo("log2file", "Guardado log en el fichero {} hasta el segundo {}.".format(fname, lasttime))
+
 
 
 
