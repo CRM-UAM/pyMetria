@@ -76,7 +76,7 @@ class Telemetria:
         while not lin.startswith('pT '):
             lin = self.sp.readline()
         ldata = lin[3:].split('/')
-        self.timeList.append(ldata[0])
+        self.timeList.append(float(ldata[0]))
         nbloque = 0
         for bloque in ldata[1].split('|'):
             self.data.append([])
@@ -98,7 +98,7 @@ class Telemetria:
         while lin.startswith('pT ') == False:
             lin = self.sp.readline()
         ldata = lin[3:].split('/')
-        self.timeList.append(ldata[0])
+        self.timeList.append(float(ldata[0]))
         nbloque = 0
         for bloque in ldata[1].split('|'):
             ind = 0
@@ -143,20 +143,19 @@ def updatePlot(i):
     '''
     global TELEM
     ind = 0
+    lasttime = 0
+    if len(TELEM.getTimeList()) > 0:
+        lasttime = TELEM.getTimeList()[-1]
+    ltimes = [x for x in TELEM.getTimeList() if x > (float(lasttime) - ANCHO_X_SEG)]
     for i in range(len(TELEM.getData())):
-        numpoints = min([len(TELEM.getTimeList()), 100])
-        ltotal = [item for sublist in TELEM.getData()[i] for item in sublist[-numpoints:]]
+        ltotal = [item for sublist in TELEM.getData()[i] for item in sublist[-len(ltimes):]]
         mmin, mmax = min(ltotal), max(ltotal)
         ax = TELEM.getAx(i)
         ax.set_ylim([mmin-float(mmax)*0.1, mmax*1.1])
-        lasttime = 0
-        if len(TELEM.getTimeList()) > 0:
-            lasttime = TELEM.getTimeList()[-1]
-        ax.set_xlim([int(lasttime)-ANCHO_X_SEG, int(lasttime)])
+        ax.set_xlim([float(lasttime)-ANCHO_X_SEG, float(lasttime)])
         for j in range(len(TELEM.getData()[i])):
-            numpoints = len( [x for x in TELEM.getData()[i][j] if x > (int(lasttime)-100)])
             lin = TELEM.getLines()
-            lin[ind].set_data(TELEM.getTimeList()[-numpoints:], TELEM.getData()[i][j][-numpoints:])
+            lin[ind].set_data(ltimes, TELEM.getData()[i][j][-len(ltimes):])
             ind += 1
     return TELEM.getLines()
 
@@ -245,7 +244,7 @@ class Page(tk.Frame):
 
 
 app = SeaofBTCapp()
-ANIM = animation.FuncAnimation(TELEM.getFig(), updatePlot, init_func=init, frames=None, interval=100, blit=False)
+ANIM = animation.FuncAnimation(TELEM.getFig(), updatePlot, init_func=init, frames=None, interval=60, blit=False)
 app.mainloop()
 
 
