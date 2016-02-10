@@ -14,8 +14,6 @@ TODO (para versiones futuras):
     -Establecer una comunicación bidireccional para hacer peticiones de información de titulos y etiquetas de las diferentes señales
 '''
 
-
-
 import serial
 import time
 import matplotlib
@@ -135,9 +133,9 @@ def updatePlot(i):
     for i in range(len(TELEM.getData())):
         numpoints = min([len(TELEM.getTimeList()), 100])
         ltotal = [item for sublist in TELEM.getData()[i] for item in sublist[-numpoints:]]
-        mmin, mmax = min(ltotal)*1.1, max(ltotal)*0.9
+        mmin, mmax = min(ltotal), max(ltotal)
         ax = TELEM.getAx(i)
-        ax.set_ylim([mmin, mmax])
+        ax.set_ylim([mmin-float(mmax)*0.1, mmax*1.1])
         lasttime = 0
         if len(TELEM.getTimeList()) > 0:
             lasttime = TELEM.getTimeList()[-1]
