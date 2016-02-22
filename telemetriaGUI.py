@@ -68,6 +68,9 @@ class Telemetria:
     def getFig(self):
         return self.fig
 
+    def printSerial(self, str):
+        self.sp.write(str)
+
     def inicializar(self):
         '''
         Metodo para inicializar la lectura de datos de telemetria por BT. Lee un mensaje y lo decodifica determinando en funcion de este mensaje el numero de gráficas y lineas por grafica necesarias.
@@ -129,7 +132,7 @@ class Telemetria:
         self.connected = False
 
 
-TELEM = Telemetria('/dev/cu.bqZUM_BT328-SPPDev')
+TELEM = Telemetria('/dev/cu.bqUNO-SPPDev')
 TELEM.inicializar()
 
 
@@ -233,6 +236,30 @@ class Page(tk.Frame):
         button1 = ttk.Button(self, text="Enter",
                             command=lambda: self.changeXlen()).grid(row=1,column=2)
 
+        lbl1 = tk.Label(self, text="ajustar KP").grid(row=2,column=0)
+        self.entKP = tk.Entry(self)
+        self.entKP.grid(row=2,column=1)
+        buttonKP = ttk.Button(self, text="Enviar",
+                            command=lambda: self.changeKP()).grid(row=2,column=2)
+
+        lbl2= tk.Label(self, text="ajustar KD").grid(row=3,column=0)
+        self.entKD = tk.Entry(self)
+        self.entKD.grid(row=3,column=1)
+        buttonKD = ttk.Button(self, text="Enviar",
+                            command=lambda: self.changeKD()).grid(row=3,column=2)
+
+        lbl3 = tk.Label(self, text="ajustar KI").grid(row=4,column=0)
+        self.entKI = tk.Entry(self)
+        self.entKI.grid(row=4,column=1)
+        buttonKI = ttk.Button(self, text="Enviar",
+                            command=lambda: self.changeKI()).grid(row=4,column=2)
+
+        lbl4 = tk.Label(self, text="ajustar VEL_BASE").grid(row=5,column=0)
+        self.entVB = tk.Entry(self)
+        self.entVB.grid(row=5,column=1)
+        buttonVB = ttk.Button(self, text="Enviar",
+                            command=lambda: self.changeVB()).grid(row=5,column=2)
+
 
         canvas = FigureCanvasTkAgg(TELEM.getFig(), self)
         canvas.show()
@@ -242,11 +269,11 @@ class Page(tk.Frame):
         #self.entXlen.pack(side=tk.LEFT)
         #button1.pack(side=tk.LEFT)
 
-        lblF = tk.Label(self, text="Nombre del fichero Log").grid(row=2,column=0)
+        lblF = tk.Label(self, text="Nombre del fichero Log").grid(row=6,column=0)
         self.entFile = tk.Entry(self)
-        self.entFile.grid(row=2,column=1)
+        self.entFile.grid(row=6,column=1)
         button2 = ttk.Button(self, text="Guardar datos",
-                            command=lambda: self.changeLog()).grid(row=2,column=2)
+                            command=lambda: self.changeLog()).grid(row=6,column=2)
 
         #lblF.pack(side=tk.BOTTOM, padx=5, pady=5)
         #self.entFile.pack(side=tk.LEFT)
@@ -259,6 +286,19 @@ class Page(tk.Frame):
     def changeXlen(self):
         global ANCHO_X_SEG
         ANCHO_X_SEG = int(self.entXlen.get())
+
+    def changeKP(self):
+        TELEM.printSerial("=P" + self.entKP.get()+"+")
+
+    def changeKD(self):
+        TELEM.printSerial("=D" + self.entKD.get()+"+")
+
+    def changeKI(self):
+        TELEM.printSerial("=I" + self.entKI.get()+"+")
+
+    def changeVB(self):
+        TELEM.printSerial("=B" + self.entVB.get()+"+")
+
     def changeLog(self):
         global TELEM
         fname = self.entFile.get()
